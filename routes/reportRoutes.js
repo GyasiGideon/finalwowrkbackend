@@ -1,0 +1,27 @@
+import express from 'express';
+import {
+  fetchReports,
+  fetchReportsByDispenser,
+  submitReport,
+  fetchReportsByUser,
+  fetchLiveDispenserStatus, // ✅ include this
+} from '../controllers/reportController.js';
+
+const router = express.Router();
+
+// Get all reports (optional usage with ?user_id=)
+router.get('/', fetchReports);
+
+// Get reports from reports table for specific user
+router.get('/user/:user_id', fetchReportsByUser);
+
+// Get live dispenser data (not from reports table)
+router.get('/live/:user_id', fetchLiveDispenserStatus);
+
+// Get reports for a specific dispenser
+router.get('/:dispenser_id', fetchReportsByDispenser);
+
+// Submit a new report
+router.post('/', submitReport);
+
+export default router;
