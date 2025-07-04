@@ -4,10 +4,14 @@ import {
   fetchReportsByDispenser,
   submitReport,
   fetchReportsByUser,
-  fetchLiveDispenserStatus, // ✅ include this
+    fetchUsageOverTime, 
+  fetchLiveDispenserStatus, 
 } from '../controllers/reportController.js';
 
 const router = express.Router();
+
+// Add this new route for time-series usage data
+router.get('/usage/:user_id', fetchUsageOverTime);
 
 // Get all reports (optional usage with ?user_id=)
 router.get('/', fetchReports);

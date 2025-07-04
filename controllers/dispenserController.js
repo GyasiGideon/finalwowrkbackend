@@ -4,7 +4,7 @@ import {
   fetchDispenserById,
   editDispenser,
   removeDispenser,
-  getDispensersByRoom, // ✅ added
+  getDispensersByRoom, 
 } from '../services/dispenserService.js';
 import { insertDispenserLog } from '../models/logModel.js';
 import { getBuildingByName } from '../services/biuldingService.js';
@@ -93,7 +93,7 @@ export const deleteDispenser = async (req, res) => {
   }
 };
 
-// ✅ NEW: Get dispensers by roomId
+//  NEW: Get dispensers by roomId
 export const getDispensersByRoomId = async (req, res) => {
   try {
     const { roomId } = req.params;
@@ -147,5 +147,45 @@ export const updateDispenserStatus = async (req, res) => {
   } catch (err) {
     console.error('Update status error:', err);
     res.status(500).json({ error: 'Failed to update dispenser status' });
+  }
+};
+
+export const logDispenserUsage = async (req, res) => {
+  const { dispenser_uid, sanitizer_level, tissue_level } = req.body;
+
+  if (!dispenser_uid || sanitizer_level == null || tissue_level == null) {
+    return res.status(400).json({ error: 'Missing required fields' });
+  }
+
+  try {
+    // Find dispenser by UID
+    const result = await pool.query(
+      'SELECT id FROM dispensers WHERE dispenser_uid = $1',
+      [dispenser_uid]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Dispenser not found' });
+    }
+
+    const dispenserId = result.rows[0].id;
+
+    // Insert into reports table
+    await pool.query(
+      `INSERT INTO reports (dispenser_id, sanitizer_level, tissue_level)
+       VALUES ($1, $2, $3)`,
+      [dispenserId, sanitizer_level, tissue_level]
+    );
+
+    // Optionally update dispenser's current levels
+    await pool.query(
+      `UPDATE dispensers SET sanitizer_level = $1, tissue_level = $2 WHERE id = $3`,
+      [sanitizer_level, tissue_level, dispenserId]
+    );
+
+    res.status(200).json({ message: 'Usage logged successfully' });
+  } catch (err) {
+    console.error('❌ Failed to log usage:', err);
+    res.status(500).json({ error: 'Server error while logging usage' });
   }
 };

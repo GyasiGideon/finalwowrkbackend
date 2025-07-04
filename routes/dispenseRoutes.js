@@ -5,7 +5,8 @@ import {
   getDispenserById,
   updateDispenser,
   deleteDispenser,
-  getDispensersByRoomId, // ✅ added
+  getDispensersByRoomId,
+  logDispenserUsage , //
 } from '../controllers/dispenserController.js';
 import { updateDispenserStatus } from '../controllers/dispenserController.js';
 
@@ -17,6 +18,7 @@ router.get('/:id', getDispenserById);
 router.put('/:id', updateDispenser);
 router.delete('/:id', deleteDispenser);
 router.put('/update-status', updateDispenserStatus); //
+router.post('/update', logDispenserUsage);
 
 router.get('/room/:roomId', getDispensersByRoomId);
 

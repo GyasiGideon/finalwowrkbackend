@@ -10,15 +10,30 @@ import authRoutes from './routes/authRoutes.js';
 import logRoutes from './routes/logRoutes.js';
 import { notFound, errorHandler } from './middleware/middleware.js';
 import dashboardRoutes from './routes/dashboardRoutes.js';
+import './mqttClient.js'; 
+import usageRoutes from './routes/usageRoutes.js';
 
+import predictionRoutes from './routes/predictionRoutes.js';
 dotenv.config();
 const app = express();
 
 // Middlewares
-app.use(cors({
-  origin: 'http://localhost:5173',
-  credentials: true,
-}));
+const allowedOrigins = ['http://localhost:5173', 'http://localhost:4173'];
+
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
+    credentials: true,
+  })
+);
+
+
 
 app.use(express.json());
 
@@ -30,6 +45,9 @@ app.use('/api/reports', reportRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/logs', logRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/usage', usageRoutes);
+app.use('/api/dispenser', dispenserRoutes);
+app.use('/api/predictions', predictionRoutes); 
 // Error handling
 app.use(notFound);
 app.use(errorHandler);

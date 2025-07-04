@@ -1,4 +1,4 @@
-import pool from '../config/db.js'; // ✅ Import correct DB connection
+import pool from '../config/db.js'; // 
 
 export const insertDispenserLog = async (dispenserId, message) => {
   await pool.query(

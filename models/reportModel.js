@@ -1,6 +1,6 @@
 import pool from '../config/db.js';
 
-// 🟢 1. Live dispenser status
+// 1. Live dispenser status
 export const getLiveDispenserStatusByUser = async (user_id) => {
   const result = await pool.query(
     `SELECT 
@@ -22,7 +22,7 @@ export const getLiveDispenserStatusByUser = async (user_id) => {
   return result.rows;
 };
 
-// 🟢 2. Create report
+// 2. Create report
 export const createReport = async (dispenser_id, sanitizer_level, tissue_level, fault) => {
   const result = await pool.query(
     `INSERT INTO reports (dispenser_id, sanitizer_level, tissue_level, fault) 
@@ -56,4 +56,19 @@ export const getReportsByUser = async (user_id) => {
   return result.rows;
 };
 
-
+export const getUsageOverTimeByUser = async (user_id) => {
+  const result = await pool.query(
+    `SELECT 
+       r.created_at::date AS date,
+       100 - r.sanitizer_level AS sanitizer_usage,
+       100 - r.tissue_level AS tissue_usage
+     FROM reports r
+     JOIN dispensers d ON r.dispenser_id = d.id
+     JOIN rooms ro ON d.room_id = ro.id
+     JOIN buildings b ON ro.building_id = b.id
+     WHERE b.user_id = $1
+     ORDER BY r.created_at ASC`,
+    [user_id]
+  );
+  return result.rows;
+};

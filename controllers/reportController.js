@@ -3,9 +3,10 @@ import {
   getReportsByDispenser,
   getReportsByUser,
   getLiveDispenserStatusByUser,
+  getUsageOverTimeByUser,
 } from '../models/reportModel.js';
 
-// ✅ GET /api/reports?user_id=abc123 (optional query param version)
+// GET /api/reports?user_id=abc123 
 export const fetchReports = async (req, res) => {
   try {
     const user_id = req.query.user_id;
@@ -21,7 +22,18 @@ export const fetchReports = async (req, res) => {
   }
 };
 
-// ✅ GET /api/reports/user/:user_id (fetch from reports table)
+export const fetchUsageOverTime = async (req, res) => {
+  try {
+    const { user_id } = req.params;
+    const usage = await getUsageOverTimeByUser(user_id);
+    res.status(200).json(usage);
+  } catch (error) {
+    console.error('❌ Failed to fetch usage over time:', error);
+    res.status(500).json({ error: 'Failed to fetch usage history' });
+  }
+};
+
+//  GET /api/reports/user/:user_id (fetch from reports table)
 export const fetchReportsByUser = async (req, res) => {
   try {
     const { user_id } = req.params;
@@ -33,7 +45,7 @@ export const fetchReportsByUser = async (req, res) => {
   }
 };
 
-// ✅ GET /api/reports/live/:user_id (fetch from live dispenser status)
+//  GET /api/reports/live/:user_id (fetch from live dispenser status)
 export const fetchLiveDispenserStatus = async (req, res) => {
   try {
     const { user_id } = req.params;
@@ -45,7 +57,7 @@ export const fetchLiveDispenserStatus = async (req, res) => {
   }
 };
 
-// ✅ GET /api/reports/:dispenser_id (all reports for 1 dispenser)
+//  GET /api/reports/:dispenser_id (all reports for 1 dispenser)
 export const fetchReportsByDispenser = async (req, res) => {
   try {
     const { dispenser_id } = req.params;
@@ -57,7 +69,7 @@ export const fetchReportsByDispenser = async (req, res) => {
   }
 };
 
-// ✅ POST /api/reports (submit new report)
+// POST /api/reports (submit new report)
 export const submitReport = async (req, res) => {
   try {
     const { dispenser_id, sanitizer_level, tissue_level, fault } = req.body;
