@@ -12,6 +12,7 @@ import { notFound, errorHandler } from './middleware/middleware.js';
 import dashboardRoutes from './routes/dashboardRoutes.js';
 import './mqttClient.js'; 
 import usageRoutes from './routes/usageRoutes.js';
+import espRoutes from "./routes/espRoutes.js";
 
 import predictionRoutes from './routes/predictionRoutes.js';
 dotenv.config();
@@ -39,6 +40,7 @@ app.use(express.json());
 
 // Routes
 app.use('/api/buildings', buildingRoutes);
+app.use('/api/esp', espRoutes);
 app.use('/api/rooms', roomRoutes);
 app.use('/api/dispensers', dispenserRoutes);
 app.use('/api/reports', reportRoutes);
