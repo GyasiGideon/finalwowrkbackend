@@ -1,7 +1,11 @@
+// filepath: n:\fianl_year\SmartDispenser\smart-dispense-backend\controllers\authController.js
 import db from '../config/db.js';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
+import { sendPasswordResetEmail } from '../services/emailService.js';
+import PasswordResetToken from '../models/passwordResetToken.js';
+
 dotenv.config();
 
 // Register User
@@ -83,6 +87,61 @@ export const loginUser = async (req, res) => {
     });
   } catch (error) {
     console.error('❌ Login error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// Request Password Reset
+export const requestPasswordReset = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    // Check if user exists
+    const userResult = await db.query(
+      'SELECT * FROM users WHERE email = $1',
+      [email]
+    );
+    const user = userResult.rows[0];
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Create password reset token
+    const token = await PasswordResetToken.createToken(user.id);
+
+    // Send email with reset link
+    await sendPasswordResetEmail(user.email, token);
+
+    res.json({ message: 'Password reset link sent to your email' });
+  } catch (error) {
+    console.error('❌ Password reset error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// Reset Password
+export const resetPassword = async (req, res) => {
+  try {
+    const { token, newPassword } = req.body;
+
+    // Validate token
+    const userId = await PasswordResetToken.validateToken(token);
+    if (!userId) {
+      return res.status(400).json({ message: 'Invalid or expired token' });
+    }
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update user's password
+    await db.query(
+      'UPDATE users SET password_hash = $1 WHERE id = $2',
+      [hashedPassword, userId]
+    );
+
+    res.json({ message: 'Password has been reset successfully' });
+  } catch (error) {
+    console.error('❌ Reset password error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
