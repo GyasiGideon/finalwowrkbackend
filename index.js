@@ -13,8 +13,9 @@ import dashboardRoutes from './routes/dashboardRoutes.js';
 import './mqttClient.js'; 
 import usageRoutes from './routes/usageRoutes.js';
 import espRoutes from "./routes/espRoutes.js";
-
 import predictionRoutes from './routes/predictionRoutes.js';
+import changepasswordRoutes from './routes/changepassword.js';
+
 dotenv.config();
 const app = express();
 
@@ -50,6 +51,7 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/usage', usageRoutes);
 app.use('/api/dispenser', dispenserRoutes);
 app.use('/api/predictions', predictionRoutes); 
+app.use('/api/user', changepasswordRoutes);
 // Error handling
 app.use(notFound);
 app.use(errorHandler);
