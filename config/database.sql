@@ -18,12 +18,7 @@ CREATE TABLE rooms (
   created_at TIMESTAMP DEFAULT NOW()
 );
 
-ALTER TABLE reports
-  ALTER COLUMN sanitizer_level TYPE NUMERIC(5,2),
-  ALTER COLUMN tissue_level TYPE NUMERIC(5,2);
-ALTER TABLE reports
-  ADD COLUMN system_status TEXT NOT NULL DEFAULT 'OFF',
-  ADD COLUMN connection_status TEXT NOT NULL DEFAULT 'OFFLINE';
+
 
 
 CREATE TABLE dispensers (
@@ -43,3 +38,9 @@ CREATE TABLE reports (
   fault TEXT,
   created_at TIMESTAMP DEFAULT NOW()
 );
+ALTER TABLE reports
+  ALTER COLUMN sanitizer_level TYPE NUMERIC(5,2),
+  ALTER COLUMN tissue_level TYPE NUMERIC(5,2);
+ALTER TABLE reports
+  ADD COLUMN system_status TEXT NOT NULL DEFAULT 'OFF',
+  ADD COLUMN connection_status TEXT NOT NULL DEFAULT 'OFFLINE';

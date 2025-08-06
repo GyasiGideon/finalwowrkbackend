@@ -20,7 +20,7 @@ dotenv.config();
 const app = express();
 
 // Middlewares
-const allowedOrigins = ['http://localhost:5173', 'http://localhost:4173'];
+const allowedOrigins = ['https://sanziroll.vercel.app', 'http://localhost:5173'];
 
 app.use(
   cors({

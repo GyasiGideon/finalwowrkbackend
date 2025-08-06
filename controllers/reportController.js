@@ -4,6 +4,7 @@ import {
   getReportsByUser,
   getLiveDispenserStatusByUser,
   getUsageOverTimeByUser,
+  getSystemAndConnectionStatusByUser,
 } from '../models/reportModel.js';
 
 // GET /api/reports?user_id=abc123 
@@ -86,3 +87,14 @@ export const submitReport = async (req, res) => {
   }
 };
 
+// 🆕 GET /api/reports/status/:user_id
+export const fetchSystemAndConnectionStatus = async (req, res) => {
+  try {
+    const { user_id } = req.params;
+    const statusReports = await getSystemAndConnectionStatusByUser(user_id);
+    res.status(200).json(statusReports);
+  } catch (error) {
+    console.error('❌ Failed to fetch system and connection status:', error);
+    res.status(500).json({ error: 'Failed to fetch system and connection status' });
+  }
+};

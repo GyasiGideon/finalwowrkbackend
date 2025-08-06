@@ -72,3 +72,21 @@ export const getUsageOverTimeByUser = async (user_id) => {
   );
   return result.rows;
 };
+
+export const getSystemAndConnectionStatusByUser = async (user_id) => {
+  const result = await pool.query(
+    `SELECT 
+       d.dispenser_uid,
+       r.system_status,
+       r.connection_status
+     FROM reports r
+     JOIN dispensers d ON r.dispenser_id = d.id
+     JOIN rooms rm ON d.room_id = rm.id
+     JOIN buildings b ON rm.building_id = b.id
+     WHERE b.user_id = $1
+     ORDER BY r.created_at DESC`,
+    [user_id]
+  );
+  return result.rows;
+};
+
