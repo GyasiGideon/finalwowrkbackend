@@ -10,16 +10,16 @@ import authRoutes from './routes/authRoutes.js';
 import logRoutes from './routes/logRoutes.js';
 import { notFound, errorHandler } from './middleware/middleware.js';
 import dashboardRoutes from './routes/dashboardRoutes.js';
-import './mqttClient.js'; 
+import './mqttClient.js';
 import usageRoutes from './routes/usageRoutes.js';
-import espRoutes from "./routes/espRoutes.js";
+import espRoutes from './routes/espRoutes.js';
 import predictionRoutes from './routes/predictionRoutes.js';
 import changepasswordRoutes from './routes/changepassword.js';
 
 dotenv.config();
 const app = express();
 
-// Middlewares
+// ✅ CORS FIX
 const allowedOrigins = ['https://sanziroll.vercel.app', 'http://localhost:5173'];
 
 app.use(
@@ -28,6 +28,7 @@ app.use(
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
+        console.error(`❌ Blocked by CORS: ${origin}`);
         callback(new Error('Not allowed by CORS'));
       }
     },
@@ -35,10 +36,9 @@ app.use(
   })
 );
 
-
-
 app.use(express.json());
 
+// Test endpoint
 app.get('/', (req, res) => {
   res.send('🚀 Smart Dispense Backend is running!');
 });
@@ -54,14 +54,12 @@ app.use('/api/logs', logRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/usage', usageRoutes);
 app.use('/api/dispenser', dispenserRoutes);
-app.use('/api/predictions', predictionRoutes); 
+app.use('/api/predictions', predictionRoutes);
 app.use('/api/user', changepasswordRoutes);
+
 // Error handling
 app.use(notFound);
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-
-
-
+app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
