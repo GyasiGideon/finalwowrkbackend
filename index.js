@@ -39,6 +39,10 @@ app.use(
 
 app.use(express.json());
 
+app.get('/', (req, res) => {
+  res.send('🚀 Smart Dispense Backend is running!');
+});
+
 // Routes
 app.use('/api/buildings', buildingRoutes);
 app.use('/api/esp', espRoutes);
@@ -57,9 +61,7 @@ app.use(notFound);
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 
-if (process.env.NODE_ENV !== 'test') {
-  app.listen(PORT, () => console.log(`Server running`));
-}
 
 
