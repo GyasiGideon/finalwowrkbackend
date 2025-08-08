@@ -28,19 +28,57 @@ export const getRefillPredictions = async (user_id) => {
     SELECT 
       d.id AS dispenser_id,
       d.dispenser_uid,
-      d.sanitizer_level,
-      d.tissue_level,
+      COALESCE(
+        (SELECT r2.sanitizer_level 
+         FROM reports r2 
+         WHERE r2.dispenser_id = d.id 
+         ORDER BY r2.created_at DESC 
+         LIMIT 1),
+        d.sanitizer_level
+      ) AS sanitizer_level,
+      COALESCE(
+        (SELECT r3.tissue_level 
+         FROM reports r3 
+         WHERE r3.dispenser_id = d.id 
+         ORDER BY r3.created_at DESC 
+         LIMIT 1),
+        d.tissue_level
+      ) AS tissue_level,
       r.name AS room_name,
       b.name AS building_name,
       CASE 
         WHEN au.avg_sanitizer_usage > 0 THEN 
-          to_char(current_date + (d.sanitizer_level / au.avg_sanitizer_usage) * interval '1 day', 'Mon DD, YYYY')
-        ELSE NULL 
+          to_char(
+            current_date + (
+              COALESCE(
+                (SELECT r2.sanitizer_level 
+                 FROM reports r2 
+                 WHERE r2.dispenser_id = d.id 
+                 ORDER BY r2.created_at DESC 
+                 LIMIT 1),
+                d.sanitizer_level
+              ) / au.avg_sanitizer_usage
+            ) * interval '1 day', 
+            'Mon DD, YYYY'
+          )
+        ELSE "unknown"
       END AS sanitizer_finish_date,
       CASE 
         WHEN au.avg_tissue_usage > 0 THEN 
-          to_char(current_date + (d.tissue_level / au.avg_tissue_usage) * interval '1 day', 'Mon DD, YYYY')
-        ELSE NULL 
+          to_char(
+            current_date + (
+              COALESCE(
+                (SELECT r3.tissue_level 
+                 FROM reports r3 
+                 WHERE r3.dispenser_id = d.id 
+                 ORDER BY r3.created_at DESC 
+                 LIMIT 1),
+                d.tissue_level
+              ) / au.avg_tissue_usage
+            ) * interval '1 day', 
+            'Mon DD, YYYY'
+          )
+        ELSE "Unknown" 
       END AS tissue_finish_date
     FROM dispensers d
     JOIN rooms r ON d.room_id = r.id

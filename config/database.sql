@@ -11,7 +11,7 @@ CREATE TABLE buildings (
   name TEXT NOT NULL,
   created_at TIMESTAMP DEFAULT NOW()
 );
-CREATE TABLE rooms (
+CREATE TABLE rooms (a
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   building_id UUID REFERENCES buildings(id) ON DELETE CASCADE,
   name TEXT NOT NULL,

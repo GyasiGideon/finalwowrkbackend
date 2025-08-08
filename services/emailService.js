@@ -1,29 +1,32 @@
-import nodemailer from 'nodemailer';
+// services/emailService.js
+import sgMail from '@sendgrid/mail';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
-const transporter = nodemailer.createTransport({
-  service: process.env.EMAIL_SERVICE, // e.g., 'gmail'
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
+sgMail.setApiKey(process.env.EMAIL_PASS); // This is your SendGrid API Key
 
 export const sendPasswordResetEmail = async (to, token) => {
   const resetLink = `${process.env.FRONTEND_URL}/reset-password/${token}`;
 
-  await transporter.sendMail({
-    from: process.env.EMAIL_USER,
+  const msg = {
     to,
-    subject: 'Password Reset Request - Smart Dispense',
+    from: 'gyasingideon@gmail.com', // Can be anything, but must be a verified sender on SendGrid
+    subject: 'Password Reset Request - Smart Dispenser',
+    text: `Click the link to reset your password: ${resetLink}`,
     html: `
       <p>You requested a password reset.</p>
-      <p>Click below to reset your password:</p>
+      <p>Click the link below to reset your password:</p>
       <a href="${resetLink}" target="_blank">${resetLink}</a>
-      <p>If you didn’t request this, ignore this email.</p>
+      <p>If you didn’t request this, you can ignore this email.</p>
     `,
-  });
+  };
+
+  try {
+    await sgMail.send(msg);
+    console.log('✅ Email sent to:', to);
+  } catch (error) {
+    console.error('❌ SendGrid email error:', error.response?.body || error.message);
+    throw new Error('Email could not be sent');
+  }
 };
-  
