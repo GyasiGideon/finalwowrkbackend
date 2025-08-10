@@ -15,14 +15,20 @@ export const getRefillPredictions = async (user_id) => {
       JOIN rooms ro ON d.room_id = ro.id
       JOIN buildings b ON ro.building_id = b.id
       WHERE b.user_id = $1
+      AND r.created_at >= CURRENT_DATE - INTERVAL '30 days'  -- Only consider recent data
     ),
     avg_usage AS (
       SELECT
         dispenser_id,
-        ROUND(AVG(NULLIF(prev_sanitizer - sanitizer_level, 0)), 2) AS avg_sanitizer_usage,
-        ROUND(AVG(NULLIF(prev_tissue - tissue_level, 0)), 2) AS avg_tissue_usage
+        COALESCE(
+          NULLIF(ROUND(AVG(NULLIF(prev_sanitizer - sanitizer_level, 0)), 2), 0),
+          0.1  -- Default minimal sanitizer usage (0.1% per day)
+        ) AS avg_sanitizer_usage,
+        COALESCE(
+          NULLIF(ROUND(AVG(NULLIF(prev_tissue - tissue_level, 0)), 2), 0),
+          0.1  -- Default minimal tissue usage (0.1% per day)
+        ) AS avg_tissue_usage
       FROM usage_stats
-      WHERE prev_sanitizer IS NOT NULL OR prev_tissue IS NOT NULL
       GROUP BY dispenser_id
     )
     SELECT 
@@ -49,7 +55,7 @@ export const getRefillPredictions = async (user_id) => {
       CASE 
         WHEN au.avg_sanitizer_usage > 0 THEN 
           to_char(
-            current_date + (
+            CURRENT_DATE + (
               COALESCE(
                 (SELECT r2.sanitizer_level 
                  FROM reports r2 
@@ -58,15 +64,15 @@ export const getRefillPredictions = async (user_id) => {
                  LIMIT 1),
                 d.sanitizer_level
               ) / au.avg_sanitizer_usage
-            ) * interval '1 day', 
-            'Mon DD, YYYY'
+            ) * INTERVAL '1 day', 
+            'FMDay, Month DD, YYYY'
           )
-        ELSE "unknown"
+        ELSE 'Insufficient data'  -- More descriptive than N/A
       END AS sanitizer_finish_date,
       CASE 
         WHEN au.avg_tissue_usage > 0 THEN 
           to_char(
-            current_date + (
+            CURRENT_DATE + (
               COALESCE(
                 (SELECT r3.tissue_level 
                  FROM reports r3 
@@ -75,11 +81,12 @@ export const getRefillPredictions = async (user_id) => {
                  LIMIT 1),
                 d.tissue_level
               ) / au.avg_tissue_usage
-            ) * interval '1 day', 
-            'Mon DD, YYYY'
+            ) * INTERVAL '1 day', 
+            'FMDay, Month DD, YYYY'
           )
-        ELSE "Unknown" 
-      END AS tissue_finish_date
+        ELSE 'Insufficient data'
+      END AS tissue_finish_date,
+      (SELECT COUNT(*) FROM reports WHERE dispenser_id = d.id) AS report_count  -- Helpful for debugging
     FROM dispensers d
     JOIN rooms r ON d.room_id = r.id
     JOIN buildings b ON r.building_id = b.id
@@ -88,5 +95,13 @@ export const getRefillPredictions = async (user_id) => {
     ORDER BY d.created_at DESC;
   `, [user_id]);
 
-  return result.rows;
+  return result.rows.map(row => ({
+    ...row,
+    // Convert null to 'N/A' at the JavaScript level for consistency
+    sanitizer_finish_date: row.sanitizer_finish_date || 'N/A',
+    tissue_finish_date: row.tissue_finish_date || 'N/A',
+    // Add stock status indicators
+    sanitizer_status: row.sanitizer_level >= 30 ? 'Good Stock' : 'Low Stock',
+    tissue_status: row.tissue_level >= 30 ? 'Good Stock' : 'Low Stock'
+  }));
 };
