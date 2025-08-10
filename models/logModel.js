@@ -11,17 +11,33 @@ export const insertDispenserLog = async (dispenserId, message) => {
 export const getLogsForUser = async (userId) => {
   const result = await pool.query(
     `
-    SELECT dl.message, dl.created_at, d.dispenser_uid
-    FROM dispenser_logs dl
-    JOIN dispensers d ON dl.dispenser_id = d.id
-    JOIN rooms r ON d.room_id = r.id
-    JOIN buildings b ON r.building_id = b.id
+    SELECT
+      d.dispenser_uid,
+      r.created_at,
+      CASE
+        WHEN r.fault = 'unavailable' THEN CONCAT('Dispenser ', d.dispenser_uid, ' is unavailable.')
+        WHEN r.tissue_level <= 30 THEN CONCAT('Tissue for dispenser ', d.dispenser_uid, ' is low.')
+        WHEN r.sanitizer_level <= 30 THEN CONCAT('Sanitizer for dispenser ', d.dispenser_uid, ' is low.')
+        ELSE NULL
+      END AS message
+    FROM reports r
+    JOIN dispensers d ON r.dispenser_id = d.id
+    JOIN rooms rm ON d.room_id = rm.id
+    JOIN buildings b ON rm.building_id = b.id
     WHERE b.user_id = $1
-    ORDER BY dl.created_at DESC
+      AND (
+        r.fault = 'unavailable' OR
+        r.tissue_level <= 30 OR
+        r.sanitizer_level <= 30
+      )
+    ORDER BY r.created_at DESC
     LIMIT 20
     `,
     [userId]
   );
 
-  return result.rows;
+  // Filter out null messages just in case
+  const filteredRows = result.rows.filter(row => row.message !== null);
+ console.log(filteredRows)
+  return filteredRows;
 };

@@ -2,23 +2,28 @@ import pool from '../config/db.js';
 
 // 1. Live dispenser status
 export const getLiveDispenserStatusByUser = async (user_id) => {
-  const result = await pool.query(
-    `SELECT 
-      d.id AS dispenser_id,
-      d.dispenser_uid,
-      d.sanitizer_level,
-      d.tissue_level,
-      d.tamper_detected,
-      d.created_at,
-      r.name AS room_name,
-      b.name AS building_name
-    FROM dispensers d
-    JOIN rooms r ON d.room_id = r.id
-    JOIN buildings b ON r.building_id = b.id
-    WHERE b.user_id = $1
-    ORDER BY d.created_at DESC`,
-    [user_id]
-  );
+  // In reportService.getLiveDispenserStatus()
+const result = await pool.query(
+  `SELECT 
+    d.id AS dispenser_id,
+    d.dispenser_uid,
+    d.sanitizer_level,
+    d.tissue_level,
+    d.tamper_detected,
+    r.system_status,
+    r.connection_status,
+    r.created_at
+  FROM dispensers d
+  LEFT JOIN (
+    SELECT DISTINCT ON (dispenser_id) *
+    FROM reports
+    ORDER BY dispenser_id, created_at DESC
+  ) r ON d.id = r.dispenser_id
+  JOIN rooms rm ON d.room_id = rm.id
+  JOIN buildings b ON rm.building_id = b.id
+  WHERE b.user_id = $1`,
+  [user_id]
+);
   return result.rows;
 };
 
@@ -75,18 +80,33 @@ export const getUsageOverTimeByUser = async (user_id) => {
 
 export const getSystemAndConnectionStatusByUser = async (user_id) => {
   const result = await pool.query(
-    `SELECT 
-       d.dispenser_uid,
-       r.system_status,
-       r.connection_status
-     FROM reports r
-     JOIN dispensers d ON r.dispenser_id = d.id
-     JOIN rooms rm ON d.room_id = rm.id
-     JOIN buildings b ON rm.building_id = b.id
-     WHERE b.user_id = $1
-     ORDER BY r.created_at DESC`,
+    `WITH latest_reports AS (
+      SELECT 
+        d.dispenser_uid,
+        r.system_status,
+        r.connection_status,
+        COALESCE(r.fault, 'Available') AS fault,  -- Ensures fault is never null
+        ROW_NUMBER() OVER (
+          PARTITION BY d.id 
+          ORDER BY r.created_at DESC
+        ) AS rn
+      FROM reports r
+      JOIN dispensers d ON r.dispenser_id = d.id
+      JOIN rooms rm ON d.room_id = rm.id
+      JOIN buildings b ON rm.building_id = b.id
+      WHERE b.user_id = $1
+    )
+    SELECT 
+      dispenser_uid,
+      system_status,
+      connection_status,
+      fault
+    FROM latest_reports
+    WHERE rn = 1`,  
     [user_id]
   );
+  
+  console.log('✅ System and connection status:', result.rows);
   return result.rows;
 };
 
