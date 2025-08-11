@@ -5,6 +5,7 @@ import {
   loginUser,
   requestPasswordReset,
   resetPassword,
+  checkEmail,
 } from "../controllers/authController.js";
 
 const router = express.Router();
@@ -12,6 +13,9 @@ const router = express.Router();
 // Auth routes
 router.post("/register", registerUser);
 router.post("/login", loginUser);
+
+// Check if email exists
+router.post("/check-email", checkEmail);
 
 // Forgot password
 router.post("/forgot-password", requestPasswordReset);

@@ -145,3 +145,32 @@ export const resetPassword = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
+
+// Check if email exists
+export const checkEmail = async (req, res) => {
+  try {
+    const { email } = req.body;
+    
+    if (!email) {
+      return res.status(400).json({ message: 'Email is required' });
+    }
+
+    // Check if email exists in database
+    const result = await db.query(
+      'SELECT id, email FROM users WHERE email = $1',
+      [email]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'Email not found' });
+    }
+
+    res.status(200).json({ 
+      message: 'Email found',
+      exists: true 
+    });
+  } catch (error) {
+    console.error('❌ Check email error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};

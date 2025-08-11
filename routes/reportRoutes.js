@@ -11,6 +11,30 @@ import {
 
 const router = express.Router();
 
+// Health check endpoint
+router.get('/health', async (req, res) => {
+  try {
+    // Test database connection
+    const pool = (await import('../config/db.js')).default;
+    await pool.query('SELECT 1');
+    
+    res.status(200).json({ 
+      status: 'OK', 
+      message: 'Report service is running',
+      database: 'Connected',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Health check failed:', error);
+    res.status(500).json({ 
+      status: 'ERROR', 
+      message: error.message,
+      database: 'Disconnected',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 // Add this new route for time-series usage data
 router.get('/usage/:user_id', fetchUsageOverTime);
 
@@ -31,7 +55,5 @@ router.get('/:dispenser_id', fetchReportsByDispenser);
 
 // Submit a new report
 router.post('/', submitReport);
-
-
 
 export default router;

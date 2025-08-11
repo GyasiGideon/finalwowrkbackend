@@ -2,29 +2,60 @@ import pool from '../config/db.js';
 
 // 1. Live dispenser status
 export const getLiveDispenserStatusByUser = async (user_id) => {
-  // In reportService.getLiveDispenserStatus()
-const result = await pool.query(
-  `SELECT 
-    d.id AS dispenser_id,
-    d.dispenser_uid,
-    d.sanitizer_level,
-    d.tissue_level,
-    d.tamper_detected,
-    r.system_status,
-    r.connection_status,
-    r.created_at
-  FROM dispensers d
-  LEFT JOIN (
-    SELECT DISTINCT ON (dispenser_id) *
-    FROM reports
-    ORDER BY dispenser_id, created_at DESC
-  ) r ON d.id = r.dispenser_id
-  JOIN rooms rm ON d.room_id = rm.id
-  JOIN buildings b ON rm.building_id = b.id
-  WHERE b.user_id = $1`,
-  [user_id]
-);
-  return result.rows;
+  try {
+    console.log(`🔍 Fetching live dispenser status for user: ${user_id}`);
+    
+    if (!user_id) {
+      console.error('❌ User ID is required');
+      throw new Error('User ID is required');
+    }
+
+    const result = await pool.query(
+      `SELECT 
+        d.id AS dispenser_id,
+        d.dispenser_uid,
+        COALESCE(d.sanitizer_level, 100) AS sanitizer_level,
+        COALESCE(d.tissue_level, 100) AS tissue_level,
+        COALESCE(d.tamper_detected, FALSE) AS tamper_detected,
+        COALESCE(r.system_status, 'OFF') AS system_status,
+        COALESCE(r.connection_status, 'OFFLINE') AS connection_status,
+        COALESCE(r.created_at, d.created_at) AS created_at
+      FROM dispensers d
+      LEFT JOIN (
+        SELECT DISTINCT ON (dispenser_id) 
+          dispenser_id,
+          system_status,
+          connection_status,
+          created_at
+        FROM reports
+        WHERE system_status IS NOT NULL 
+          AND connection_status IS NOT NULL
+        ORDER BY dispenser_id, created_at DESC
+      ) r ON d.id = r.dispenser_id
+      JOIN rooms rm ON d.room_id = rm.id
+      JOIN buildings b ON rm.building_id = b.id
+      WHERE b.user_id = $1
+      ORDER BY d.created_at DESC`,
+      [user_id]
+    );
+    
+    console.log(`✅ Found ${result.rows.length} dispensers for user ${user_id}`);
+    return result.rows;
+  } catch (error) {
+    console.error(`❌ Error in getLiveDispenserStatusByUser for user ${user_id}:`, error);
+    
+    // Check if it's a database connection error
+    if (error.code === 'ECONNREFUSED' || error.code === 'ENOTFOUND') {
+      throw new Error('Database connection failed');
+    }
+    
+    // Check if it's a query syntax error
+    if (error.code === '42601' || error.code === '42703') {
+      throw new Error('Database query syntax error');
+    }
+    
+    throw error;
+  }
 };
 
 // 2. Create report
@@ -79,34 +110,58 @@ export const getUsageOverTimeByUser = async (user_id) => {
 };
 
 export const getSystemAndConnectionStatusByUser = async (user_id) => {
-  const result = await pool.query(
-    `WITH latest_reports AS (
+  try {
+    console.log(`🔍 Fetching system and connection status for user: ${user_id}`);
+    
+    if (!user_id) {
+      console.error('❌ User ID is required');
+      throw new Error('User ID is required');
+    }
+
+    const result = await pool.query(
+      `WITH latest_reports AS (
+        SELECT 
+          d.dispenser_uid,
+          COALESCE(r.system_status, 'OFF') AS system_status,
+          COALESCE(r.connection_status, 'OFFLINE') AS connection_status,
+          COALESCE(r.fault, 'Available') AS fault,
+          ROW_NUMBER() OVER (
+            PARTITION BY d.id 
+            ORDER BY r.created_at DESC
+          ) AS rn
+        FROM dispensers d
+        LEFT JOIN reports r ON d.id = r.dispenser_id
+        JOIN rooms rm ON d.room_id = rm.id
+        JOIN buildings b ON rm.building_id = b.id
+        WHERE b.user_id = $1
+      )
       SELECT 
-        d.dispenser_uid,
-        r.system_status,
-        r.connection_status,
-        COALESCE(r.fault, 'Available') AS fault,  -- Ensures fault is never null
-        ROW_NUMBER() OVER (
-          PARTITION BY d.id 
-          ORDER BY r.created_at DESC
-        ) AS rn
-      FROM reports r
-      JOIN dispensers d ON r.dispenser_id = d.id
-      JOIN rooms rm ON d.room_id = rm.id
-      JOIN buildings b ON rm.building_id = b.id
-      WHERE b.user_id = $1
-    )
-    SELECT 
-      dispenser_uid,
-      system_status,
-      connection_status,
-      fault
-    FROM latest_reports
-    WHERE rn = 1`,  
-    [user_id]
-  );
-  
-  console.log('✅ System and connection status:', result.rows);
-  return result.rows;
+        dispenser_uid,
+        system_status,
+        connection_status,
+        fault
+      FROM latest_reports
+      WHERE rn = 1 OR rn IS NULL
+      ORDER BY dispenser_uid`,  
+      [user_id]
+    );
+    
+    console.log(`✅ Found ${result.rows.length} status records for user ${user_id}`);
+    return result.rows;
+  } catch (error) {
+    console.error(`❌ Error in getSystemAndConnectionStatusByUser for user ${user_id}:`, error);
+    
+    // Check if it's a database connection error
+    if (error.code === 'ECONNREFUSED' || error.code === 'ENOTFOUND') {
+      throw new Error('Database connection failed');
+    }
+    
+    // Check if it's a query syntax error
+    if (error.code === '42601' || error.code === '42703') {
+      throw new Error('Database query syntax error');
+    }
+    
+    throw error;
+  }
 };
 

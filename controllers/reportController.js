@@ -49,7 +49,7 @@ export const fetchReportsByUser = async (req, res) => {
 //  GET /api/reports/live/:user_id (fetch from live dispenser status)
 export const fetchLiveDispenserStatus = async (req, res) => {
   try {
-    const user_id = req.user.id; // Use authenticated user ID
+    const { user_id } = req.params; // Use URL parameter like other functions
     const status = await getLiveDispenserStatusByUser(user_id);
     res.status(200).json(status);
   } catch (error) {
